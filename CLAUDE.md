@@ -24,7 +24,7 @@ Supporting tokens: `--surface` (`#f7f8fb`, page background), `--surface-strong` 
 
 ## Current state
 
-Only the frontend exists so far. `backend/` and `scripts/` contain placeholder `AGENTS.md` files only; there is no Docker setup yet. Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on.
+The frontend is still a standalone demo. The backend (`backend/`, see `backend/AGENTS.md`) is a hello world FastAPI app serving `/api/health` and a placeholder page, packaged by the root `Dockerfile` and `docker-compose.yml` and started with `scripts/start.sh`. Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on.
 
 ## Frontend commands (run from `frontend/`)
 

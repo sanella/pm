@@ -37,12 +37,13 @@ Enrich this document with substeps, tests and success criteria for each part. Cr
 
 Docker infrastructure, FastAPI backend, start/stop scripts. Serves a hello world page and an API call.
 
-- [ ] `backend/` as a uv project (`pyproject.toml`, `uv.lock`) with `fastapi`, `uvicorn`; dev deps `pytest`, `httpx`
-- [ ] `backend/app/main.py`: `GET /api/health` returns `{"status": "ok"}`; static `index.html` hello world served at `/` that calls `/api/health` and shows the result
-- [ ] Root `Dockerfile` (Python stage only for now) using uv to install deps and run uvicorn on port 8000
-- [ ] `docker-compose.yml` with `.env` as env file and a named volume for data
-- [ ] `scripts/start.sh`, `scripts/stop.sh`, `scripts/start.ps1`, `scripts/stop.ps1`
-- [ ] Update `backend/AGENTS.md` and `scripts/AGENTS.md`; add run instructions to a minimal root `README.md`
+- [x] `backend/` as a uv project (`pyproject.toml`, `uv.lock`) with `fastapi`, `uvicorn`; dev deps `pytest`, `httpx2`
+- [x] `backend/app/main.py`: `GET /api/health` returns `{"status": "ok"}`; static `index.html` hello world served at `/` that calls `/api/health` and shows the result
+- [x] Root `Dockerfile` (Python stage only for now) using uv to install deps and run uvicorn on port 8000
+- [x] `docker-compose.yml` with `.env` as env file and a named volume for data
+- [x] `scripts/start.sh`, `scripts/stop.sh`, `scripts/start.ps1`, `scripts/stop.ps1`
+- [x] Update `backend/AGENTS.md` and `scripts/AGENTS.md`; add run instructions to a minimal root `README.md`
+- [ ] Verify in Docker: `scripts/start.sh` serves the page and API at `http://localhost:8000`, `scripts/stop.sh` stops it (blocked: Docker not installed)
 
 **Tests:** `backend/tests/test_health.py` checks `/api/health` returns 200 and the expected JSON, and `/` returns the HTML page.
 
