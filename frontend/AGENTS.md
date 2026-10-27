@@ -1,17 +1,18 @@
 # Frontend
 
-Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, `@dnd-kit` for drag and drop. Currently a frontend-only demo: all board state lives in React state and resets on reload.
+Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, `@dnd-kit` for drag and drop. Built as a static export (`output: "export"` in `next.config.ts`, output in `out/`) which the backend serves at `/`. Board state still lives in React state and resets on reload.
 
 ## Commands
 
 ```bash
 npm install
 npm run dev          # http://localhost:3000
-npm run build
+npm run build        # static export to out/
 npm run lint
 npm run test:unit    # Vitest + Testing Library (jsdom), src/**/*.test.{ts,tsx}
 npm run test:e2e     # Playwright (chromium), tests/*.spec.ts; starts dev server on 127.0.0.1:3000
 npm run test:all     # unit then e2e
+E2E_BASE_URL=http://localhost:8000 npx playwright test   # e2e against the backend-served build (no dev server started)
 ```
 
 ## Structure
@@ -25,25 +26,23 @@ npm run test:all     # unit then e2e
   - `moveCard(columns, activeId, overId)` - reorder within a column or move across columns. Dropping on a column id appends; dropping on a card id inserts at that card's position.
   - `createId(prefix)` - random id for new cards.
 - `src/components/`
-  - `KanbanBoard.tsx` - client component owning board state (`useState`), `DndContext`, and handlers for rename column, add card, delete card, drag end. Renders header and the five columns.
+  - `KanbanBoard.tsx` - client component owning board state (`useState`), `DndContext`, and handlers for rename column, add, edit and delete card, drag end. Renders header and the five columns.
   - `KanbanColumn.tsx` - droppable column; title is an inline input (rename); renders cards in a `SortableContext` and `NewCardForm`.
-  - `KanbanCard.tsx` - sortable card with a Remove button.
+  - `KanbanCard.tsx` - sortable card with Edit and Remove buttons. Edit switches to an inline form; while editing, dragging is disabled and the sortable attributes/listeners are not applied (otherwise the card becomes an `aria-disabled` button around the inputs).
   - `KanbanCardPreview.tsx` - card rendered in the `DragOverlay` while dragging.
   - `NewCardForm.tsx` - toggleable form to add a card (title required, details optional).
 
 ## Tests
 
 - `src/lib/kanban.test.ts` - `moveCard` reorder, cross-column move, drop on column.
-- `src/components/KanbanBoard.test.tsx` - renders 5 columns, rename column, add and remove card.
-- `tests/kanban.spec.ts` - e2e: board loads, add card, drag card between columns.
+- `src/components/KanbanBoard.test.tsx` - renders 5 columns, rename column, add and remove card, edit card, cancel edit.
+- `tests/kanban.spec.ts` - e2e: board loads, add card, drag card between columns, edit card.
 
 ## Test hooks
 
 - Columns: `data-testid="column-<columnId>"`; cards: `data-testid="card-<cardId>"`.
-- Column title input: `aria-label="Column title"`; delete button: `aria-label="Delete <card title>"`.
+- Column title input: `aria-label="Column title"`; card buttons: `aria-label="Edit <card title>"`, `aria-label="Delete <card title>"`; edit inputs: `aria-label="Edit card title"`, `aria-label="Edit card details"`.
 
 ## Known gaps
 
-- Cards cannot be edited after creation (only added and removed).
 - No persistence, no auth, no API calls.
-- Not yet configured for static export.

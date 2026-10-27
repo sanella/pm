@@ -39,3 +39,14 @@ test("moves a card between columns", async ({ page }) => {
   await page.mouse.up();
   await expect(targetColumn.getByTestId("card-card-1")).toBeVisible();
 });
+
+test("edits a card", async ({ page }) => {
+  await page.goto("/");
+  const card = page.getByTestId("card-card-1");
+  await card.getByRole("button", { name: /edit align roadmap themes/i }).click();
+  await card.getByLabel("Edit card title").fill("Edited via e2e");
+  await card.getByLabel("Edit card details").fill("New details.");
+  await card.getByRole("button", { name: /save/i }).click();
+  await expect(card.getByText("Edited via e2e")).toBeVisible();
+  await expect(card.getByText("New details.")).toBeVisible();
+});

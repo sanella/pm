@@ -55,11 +55,12 @@ Docker infrastructure, FastAPI backend, start/stop scripts. Serves a hello world
 
 Build the frontend statically and serve it at `/` so the demo Kanban board appears.
 
-- [ ] Set `output: "export"` in `next.config.ts`; confirm `npm run build` produces `frontend/out`
-- [ ] Add a Node build stage to the `Dockerfile`; copy `frontend/out` into the Python image
-- [ ] FastAPI mounts the static export at `/` (after `/api` routes) with `html=True`; remove the hello world page
-- [ ] Add card editing (edit title and details of an existing card), which the requirements call for but the demo lacks
-- [ ] Point a Playwright config or project at the container (`http://localhost:8000`) in addition to the dev server
+- [x] Set `output: "export"` in `next.config.ts`; confirm `npm run build` produces `frontend/out`
+- [x] Add a Node build stage to the `Dockerfile`; copy `frontend/out` into the Python image
+- [x] FastAPI mounts the static export at `/` (after `/api` routes) with `html=True`; remove the hello world page
+- [x] Add card editing (edit title and details of an existing card), which the requirements call for but the demo lacks
+- [x] Point a Playwright config or project at the container (`http://localhost:8000`) in addition to the dev server (`E2E_BASE_URL`)
+- [ ] Verify in Docker: the board loads at `http://localhost:8000` after `scripts/start.sh` (blocked: Docker not installed)
 
 **Tests:** existing unit and e2e tests still pass; new unit and e2e tests for editing a card; backend test that `/` serves `index.html` and `/api/health` still works with static files mounted.
 

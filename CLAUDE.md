@@ -24,14 +24,14 @@ Supporting tokens: `--surface` (`#f7f8fb`, page background), `--surface-strong` 
 
 ## Current state
 
-The frontend is still a standalone demo. The backend (`backend/`, see `backend/AGENTS.md`) is a hello world FastAPI app serving `/api/health` and a placeholder page, packaged by the root `Dockerfile` and `docker-compose.yml` and started with `scripts/start.sh`. Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on.
+The backend (`backend/`, see `backend/AGENTS.md`) serves `/api/health` and the frontend static export at `/`; the board itself is still client-side only (no persistence or auth yet). Packaged by the root `Dockerfile` and `docker-compose.yml` and started with `scripts/start.sh`. Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on.
 
 ## Frontend commands (run from `frontend/`)
 
 ```bash
 npm install
 npm run dev                     # Next.js dev server on :3000
-npm run build
+npm run build                   # static export to frontend/out
 npm run lint
 npm run test:unit               # Vitest (jsdom), src/**/*.test.{ts,tsx}
 npx vitest run src/lib/kanban.test.ts          # single unit test file

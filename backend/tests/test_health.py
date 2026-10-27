@@ -11,9 +11,12 @@ def test_health():
     assert response.json() == {"status": "ok"}
 
 
-def test_root_serves_html():
+def test_root_serves_frontend_index():
     response = client.get("/")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
-    assert "Hello World" in response.text
-    assert "/api/health" in response.text
+    assert "Kanban Studio" in response.text
+
+
+def test_unknown_api_route_is_404():
+    assert client.get("/api/missing").status_code == 404
