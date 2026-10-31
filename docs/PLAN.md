@@ -72,10 +72,10 @@ Build the frontend statically and serve it at `/` so the demo Kanban board appea
 
 On first visit to `/`, the user must log in with `user` / `password` to see the board, and can log out.
 
-- [ ] Backend: `SessionMiddleware` with a secret from env (dev default); `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
-- [ ] Frontend: on load call `/api/auth/me`; show a login form if 401, otherwise the board
-- [ ] Login form with error message on bad credentials; logout button in the board header
-- [ ] Next.js dev server proxies or rewrites `/api` to the backend so local dev works
+- [x] Backend: `SessionMiddleware` with a secret from env (dev default); `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- [x] Frontend: on load call `/api/auth/me`; show a login form if 401, otherwise the board
+- [x] Login form with error message on bad credentials; logout button in the board header
+- [x] Next.js dev server proxies or rewrites `/api` to the backend so local dev works
 
 **Tests:** backend tests for login success, login failure (401), `me` with and without session, logout clears session. Frontend unit tests for the login form (submit, error state) and logout. E2E: login required, wrong password shows error, successful login shows board, logout returns to login.
 
