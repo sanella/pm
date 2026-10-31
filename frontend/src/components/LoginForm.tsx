@@ -9,14 +9,22 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (await login(username, password)) {
-      onLogin(username);
-    } else {
+    setSubmitting(true);
+    setError("");
+    try {
+      if (await login(username, password)) {
+        onLogin(username);
+        return;
+      }
       setError("Invalid username or password.");
+    } catch {
+      setError("Cannot reach the server. Please try again.");
     }
+    setSubmitting(false);
   };
 
   return (
@@ -59,9 +67,10 @@ export const LoginForm = ({ onLogin }: LoginFormProps) => {
         )}
         <button
           type="submit"
-          className="w-full rounded-full bg-[var(--secondary-purple)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110"
+          disabled={submitting}
+          className="w-full rounded-full bg-[var(--secondary-purple)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110 disabled:opacity-60"
         >
-          Sign in
+          {submitting ? "Signing in..." : "Sign in"}
         </button>
       </form>
     </main>

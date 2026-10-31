@@ -17,6 +17,67 @@ describe("KanbanBoard", () => {
     await userEvent.clear(input);
     await userEvent.type(input, "New Name");
     expect(input).toHaveValue("New Name");
+    // Saved on blur: the header chip shows the new title.
+    await userEvent.tab();
+    expect(screen.getAllByText("New Name")).toHaveLength(1);
+    expect(within(getFirstColumn()).getByLabelText("Column title")).toHaveValue("New Name");
+  });
+
+  it("saves a column title on Enter", async () => {
+    render(<KanbanBoard onLogout={() => {}} />);
+    const input = within(getFirstColumn()).getByLabelText("Column title");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Ideas{Enter}");
+    expect(screen.getByText("Ideas")).toBeInTheDocument();
+  });
+
+  it("reverts an empty column title", async () => {
+    render(<KanbanBoard onLogout={() => {}} />);
+    const input = within(getFirstColumn()).getByLabelText("Column title");
+    await userEvent.clear(input);
+    await userEvent.type(input, "   ");
+    await userEvent.tab();
+    expect(within(getFirstColumn()).getByLabelText("Column title")).toHaveValue("Backlog");
+  });
+
+  it("does not add a card with a blank title", async () => {
+    render(<KanbanBoard onLogout={() => {}} />);
+    const column = getFirstColumn();
+    const before = within(column).getAllByRole("button", { name: /^drag /i }).length;
+    await userEvent.click(within(column).getByRole("button", { name: /add a card/i }));
+    await userEvent.type(within(column).getByPlaceholderText(/card title/i), "   ");
+    await userEvent.click(within(column).getByRole("button", { name: /add card/i }));
+    expect(within(column).getAllByRole("button", { name: /^drag /i })).toHaveLength(before);
+  });
+
+  it("does not save a card edit with a blank title", async () => {
+    render(<KanbanBoard onLogout={() => {}} />);
+    const card = screen.getByTestId("card-card-1");
+    await userEvent.click(
+      within(card).getByRole("button", { name: /edit align roadmap themes/i })
+    );
+    const titleInput = within(card).getByLabelText("Edit card title");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "   ");
+    await userEvent.click(within(card).getByRole("button", { name: /save/i }));
+    expect(within(card).getByLabelText("Edit card title")).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole("button", { name: /cancel/i }));
+    expect(within(card).getByText("Align roadmap themes")).toBeInTheDocument();
+  });
+
+  it("uses singular and plural card counts", () => {
+    render(<KanbanBoard onLogout={() => {}} />);
+    expect(within(screen.getByTestId("column-col-discovery")).getByText("1 card")).toBeInTheDocument();
+    expect(within(getFirstColumn()).getByText("2 cards")).toBeInTheDocument();
+  });
+
+  it("gives each card a labelled drag handle and keeps buttons out of it", () => {
+    render(<KanbanBoard onLogout={() => {}} />);
+    const card = screen.getByTestId("card-card-1");
+    expect(card).not.toHaveAttribute("role");
+    expect(
+      within(card).getByRole("button", { name: "Drag Align roadmap themes" })
+    ).toBeInTheDocument();
   });
 
   it("adds and removes a card", async () => {

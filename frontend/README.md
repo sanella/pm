@@ -1,15 +1,5 @@
 # Kanban Studio
 
-## Run
+Next.js frontend for the Project Management MVP. Commands, structure and tests are described in `AGENTS.md`.
 
-```bash
-npm install
-npm run dev
-```
-
-## Tests
-
-```bash
-npm run test:unit
-npm run test:e2e
-```
+The dev server (`npm run dev`) proxies `/api` to the FastAPI backend on port 8000, so start the backend too (see `../backend/AGENTS.md`).

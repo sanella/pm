@@ -24,6 +24,29 @@ describe("LoginForm", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("shows an error when the server cannot be reached", async () => {
+    vi.mocked(login).mockRejectedValue(new TypeError("Failed to fetch"));
+    const onLogin = vi.fn();
+    render(<LoginForm onLogin={onLogin} />);
+
+    await fillAndSubmit("user", "password");
+
+    expect(onLogin).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/cannot reach the server/i);
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeEnabled();
+  });
+
+  it("disables the button while signing in", async () => {
+    let resolve: (ok: boolean) => void = () => {};
+    vi.mocked(login).mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<LoginForm onLogin={vi.fn()} />);
+
+    await fillAndSubmit("user", "password");
+
+    expect(screen.getByRole("button", { name: /signing in/i })).toBeDisabled();
+    resolve(true);
+  });
+
   it("shows an error on invalid credentials", async () => {
     vi.mocked(login).mockResolvedValue(false);
     const onLogin = vi.fn();

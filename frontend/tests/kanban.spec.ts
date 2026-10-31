@@ -20,7 +20,8 @@ test("adds a card to a column", async ({ page }) => {
 });
 
 test("moves a card between columns", async ({ page }) => {
-  const card = page.getByTestId("card-card-1");
+  // Grab the card body (not the handle): the whole card is draggable with the mouse.
+  const card = page.getByRole("heading", { name: "Align roadmap themes" });
   const targetColumn = page.getByTestId("column-col-review");
   const cardBox = await card.boundingBox();
   const columnBox = await targetColumn.boundingBox();
@@ -50,4 +51,47 @@ test("edits a card", async ({ page }) => {
   await card.getByRole("button", { name: /save/i }).click();
   await expect(card.getByText("Edited via e2e")).toBeVisible();
   await expect(card.getByText("New details.")).toBeVisible();
+});
+
+test("moves a card with the keyboard", async ({ page }) => {
+  const handle = page.getByRole("button", { name: "Drag Align roadmap themes" });
+  // dnd-kit reacts to each key asynchronously; wait for its announcement before the next key.
+  const announcement = page.locator('[id^="DndLiveRegion"]');
+  await handle.focus();
+  await page.keyboard.press("Space");
+  await expect(announcement).toContainText("moved over droppable area card-1");
+  await page.keyboard.press("ArrowRight");
+  await expect(announcement).toContainText("moved over droppable area card-3");
+  await page.keyboard.press("Space");
+  await expect(
+    page.getByTestId("column-col-discovery").getByTestId("card-card-1")
+  ).toBeVisible();
+});
+
+test("renames a column", async ({ page }) => {
+  const title = page.getByTestId("column-col-review").getByLabel("Column title");
+  await title.fill("QA");
+  await title.press("Enter");
+  await expect(page.locator("header").getByText("QA", { exact: true })).toBeVisible();
+});
+
+test("reorders cards within a column by dragging the card", async ({ page }) => {
+  const column = page.getByTestId("column-col-progress");
+  const from = (await page.getByRole("heading", { name: "Refine status language" }).boundingBox())!;
+  const to = (await page.getByTestId("card-card-5").boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2 + 5, { steps: 12 });
+  await page.mouse.up();
+  await expect(column.locator('[data-testid^="card-"]')).toHaveText([
+    /Design card layout/,
+    /Refine status language/,
+  ]);
+});
+
+test("Space on a card's Edit button opens the editor instead of dragging", async ({ page }) => {
+  const card = page.getByTestId("card-card-1");
+  await card.getByRole("button", { name: /edit align roadmap themes/i }).focus();
+  await page.keyboard.press("Space");
+  await expect(card.getByLabel("Edit card title")).toBeVisible();
 });

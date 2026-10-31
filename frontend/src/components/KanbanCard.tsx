@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type KeyboardEventHandler } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
@@ -15,8 +15,18 @@ export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
   const [title, setTitle] = useState(card.title);
   const [details, setDetails] = useState(card.details);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id, disabled: isEditing });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: card.id, disabled: isEditing });
+  // Pointer drags start anywhere on the card; keyboard drags only from the handle,
+  // so Space/Enter on the Edit and Remove buttons still click them.
+  const { onKeyDown, ...pointerListeners } = listeners ?? {};
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -47,7 +57,7 @@ export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
         "transition-all duration-150",
         isDragging && "opacity-60 shadow-[0_18px_32px_rgba(3,33,71,0.16)]"
       )}
-      {...(isEditing ? {} : { ...attributes, ...listeners })}
+      {...pointerListeners}
       data-testid={`card-${card.id}`}
     >
       {isEditing ? (
@@ -84,7 +94,25 @@ export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
         </form>
       ) : (
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            // dnd-kit types its listeners as plain `Function`.
+            onKeyDown={onKeyDown as KeyboardEventHandler | undefined}
+            aria-label={`Drag ${card.title}`}
+            className="mt-0.5 cursor-grab touch-none rounded-md px-1 text-[var(--gray-text)] transition hover:text-[var(--navy-dark)] active:cursor-grabbing"
+          >
+            <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true" fill="currentColor">
+              <circle cx="2" cy="2" r="1.5" />
+              <circle cx="8" cy="2" r="1.5" />
+              <circle cx="2" cy="8" r="1.5" />
+              <circle cx="8" cy="8" r="1.5" />
+              <circle cx="2" cy="14" r="1.5" />
+              <circle cx="8" cy="14" r="1.5" />
+            </svg>
+          </button>
+          <div className="min-w-0 flex-1">
             <h4 className="font-display text-base font-semibold text-[var(--navy-dark)]">
               {card.title}
             </h4>

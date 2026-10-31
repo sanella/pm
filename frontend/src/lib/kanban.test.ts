@@ -17,6 +17,15 @@ describe("moveCard", () => {
     expect(result[1].cardIds).toEqual(["card-2", "card-3"]);
   });
 
+  it("returns the columns unchanged for unknown ids", () => {
+    expect(moveCard(baseColumns, "missing", "col-b")).toBe(baseColumns);
+    expect(moveCard(baseColumns, "card-1", "missing")).toBe(baseColumns);
+  });
+
+  it("returns the columns unchanged when dropping a card on itself", () => {
+    expect(moveCard(baseColumns, "card-1", "card-1")).toBe(baseColumns);
+  });
+
   it("drops cards to the end of a column", () => {
     const result = moveCard(baseColumns, "card-1", "col-b");
     expect(result[0].cardIds).toEqual(["card-2"]);

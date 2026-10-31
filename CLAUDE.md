@@ -24,19 +24,19 @@ Supporting tokens: `--surface` (`#f7f8fb`, page background), `--surface-strong` 
 
 ## Current state
 
-The backend (`backend/`, see `backend/AGENTS.md`) serves `/api/health` and the frontend static export at `/`; sign-in (`user` / `password`) is enforced via a session cookie; the board itself is still client-side only (no persistence yet). Packaged by the root `Dockerfile` and `docker-compose.yml` and started with `scripts/start.sh`. Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on.
+The backend (`backend/`, see `backend/AGENTS.md`) serves `/api/health` and the frontend static export at `/`; sign-in (`user` / `password`) is enforced via a session cookie; board CRUD API routes persist to SQLite (`docs/DATABASE.md`), but the frontend does not call them yet (Part 7). Packaged by the root `Dockerfile` and `docker-compose.yml` and started with `scripts/start.sh`. Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on.
 
 ## Frontend commands (run from `frontend/`)
 
 ```bash
 npm install
-npm run dev                     # Next.js dev server on :3000; proxies /api to the backend on :8000
+npm run dev                     # Next.js dev server on :3000; proxies /api to the backend on :8000 (API_URL)
 npm run build                   # static export to frontend/out
 npm run lint
 npm run test:unit               # Vitest (jsdom), src/**/*.test.{ts,tsx}
 npx vitest run src/lib/kanban.test.ts          # single unit test file
 npx vitest run -t "test name"                  # single test by name
-npm run test:e2e                # Playwright (tests/), auto-starts backend (:8000) and dev server (:3000)
+npm run test:e2e                # Playwright (tests/), auto-starts its own backend (:8001, temp DB) and dev server (:3001)
 npx playwright test tests/kanban.spec.ts -g "test name"
 ```
 

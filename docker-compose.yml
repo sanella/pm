@@ -8,6 +8,7 @@ services:
         required: false
     volumes:
       - data:/app/data
+    restart: unless-stopped
 
 volumes:
   data:

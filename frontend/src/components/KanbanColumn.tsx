@@ -38,12 +38,26 @@ export const KanbanColumn = ({
           <div className="flex items-center gap-3">
             <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
-              {cards.length} cards
+              {cards.length} {cards.length === 1 ? "card" : "cards"}
             </span>
           </div>
           <input
-            value={column.title}
-            onChange={(event) => onRename(column.id, event.target.value)}
+            // Remount when the saved title changes so the input shows it.
+            key={column.title}
+            defaultValue={column.title}
+            onBlur={(event) => {
+              const title = event.target.value.trim();
+              if (title && title !== column.title) {
+                onRename(column.id, title);
+              } else {
+                event.target.value = column.title;
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+              }
+            }}
             className="mt-3 w-full bg-transparent font-display text-lg font-semibold text-[var(--navy-dark)] outline-none"
             aria-label="Column title"
           />

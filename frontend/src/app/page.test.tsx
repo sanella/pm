@@ -17,6 +17,13 @@ describe("Home", () => {
     expect(screen.queryByRole("heading", { name: "Kanban Studio" })).not.toBeInTheDocument();
   });
 
+  it("shows an error with a retry button when the server is unreachable", async () => {
+    vi.mocked(getCurrentUser).mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<Home />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/cannot reach the server/i);
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
   it("shows the board when signed in", async () => {
     vi.mocked(getCurrentUser).mockResolvedValue("user");
     render(<Home />);

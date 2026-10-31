@@ -15,7 +15,7 @@ Each part has a checklist for the agent to tick off, the tests to write, and the
 
 ## Prerequisites
 
-- [ ] Docker installed on the dev machine (Docker Desktop or OrbStack). Not currently installed.
+- [x] Docker installed on the dev machine (Colima + Docker CLI via Homebrew).
 - [ ] `.env` in the project root containing `OPENROUTER_API_KEY` (needed from Part 8). Not currently present.
 
 ---
@@ -43,7 +43,7 @@ Docker infrastructure, FastAPI backend, start/stop scripts. Serves a hello world
 - [x] `docker-compose.yml` with `.env` as env file and a named volume for data
 - [x] `scripts/start.sh`, `scripts/stop.sh`, `scripts/start.ps1`, `scripts/stop.ps1`
 - [x] Update `backend/AGENTS.md` and `scripts/AGENTS.md`; add run instructions to a minimal root `README.md`
-- [ ] Verify in Docker: `scripts/start.sh` serves the page and API at `http://localhost:8000`, `scripts/stop.sh` stops it (blocked: Docker not installed)
+- [x] Verify in Docker: `scripts/start.sh` serves the page and API at `http://localhost:8000`, `scripts/stop.sh` stops it
 
 **Tests:** `backend/tests/test_health.py` checks `/api/health` returns 200 and the expected JSON, and `/` returns the HTML page.
 
@@ -60,7 +60,7 @@ Build the frontend statically and serve it at `/` so the demo Kanban board appea
 - [x] FastAPI mounts the static export at `/` (after `/api` routes) with `html=True`; remove the hello world page
 - [x] Add card editing (edit title and details of an existing card), which the requirements call for but the demo lacks
 - [x] Point a Playwright config or project at the container (`http://localhost:8000`) in addition to the dev server (`E2E_BASE_URL`)
-- [ ] Verify in Docker: the board loads at `http://localhost:8000` after `scripts/start.sh` (blocked: Docker not installed)
+- [x] Verify in Docker: the board loads at `http://localhost:8000` after `scripts/start.sh` (all e2e tests pass against the container)
 
 **Tests:** existing unit and e2e tests still pass; new unit and e2e tests for editing a card; backend test that `/` serves `index.html` and `/api/health` still works with static files mounted.
 
@@ -87,10 +87,10 @@ On first visit to `/`, the user must log in with `user` / `password` to see the 
 
 Propose a schema for the Kanban, save it as JSON, document the approach, get sign-off.
 
-- [ ] Draft schema covering users, one board per user, columns (ordered, renamable), cards (ordered within column, title, details)
-- [ ] Save as `docs/schema.json`
-- [ ] Write `docs/DATABASE.md`: tables, relationships, ordering approach, how the DB is created on first run, how the default board is seeded for a new user
-- [ ] User reviews and approves the schema (user sign-off)
+- [x] Draft schema covering users, one board per user, columns (ordered, renamable), cards (ordered within column, title, details)
+- [x] Save as `docs/schema.json`
+- [x] Write `docs/DATABASE.md`: tables, relationships, ordering approach, how the DB is created on first run, how the default board is seeded for a new user
+- [x] User reviews and approves the schema (user sign-off; new boards seeded with the demo cards)
 
 **Success criteria:** user has approved `docs/schema.json` and `docs/DATABASE.md`.
 
@@ -100,10 +100,10 @@ Propose a schema for the Kanban, save it as JSON, document the approach, get sig
 
 API routes to read and change a user's Kanban, persisted in SQLite.
 
-- [ ] `backend/app/db.py`: connect, create tables if missing, seed `user` and their default board
-- [ ] Routes (all require a session): get board; rename column; create card; update card; delete card; move card (target column and position)
-- [ ] Pydantic request/response models matching the frontend `BoardData` shape
-- [ ] Return 404 for ids not belonging to the current user
+- [x] `backend/app/db.py`: connect, create tables if missing, seed `user` and their default board
+- [x] Routes (all require a session): get board; rename column; create card; update card; delete card; move card (target column and position)
+- [x] Pydantic request/response models matching the frontend `BoardData` shape
+- [x] Return 404 for ids not belonging to the current user
 
 **Tests:** DB created from scratch on a fresh path; seed board present; each route's happy path; ordering correct after moves within and across columns; 401 without session; 404 for unknown ids; data persists across app restarts using the same file.
 
