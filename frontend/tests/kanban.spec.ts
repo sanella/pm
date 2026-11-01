@@ -31,7 +31,8 @@ const deleteCard = async (page: Page, title: string) => {
   await expect(card(page, title)).toHaveCount(0);
 };
 
-// Mouse drag from the card body (the whole card is draggable with the mouse).
+// Mouse drag from the card body (the whole card is draggable with the mouse). Both points must
+// be inside the viewport: the board can be taller than it, and off-screen points hit nothing.
 const drag = async (page: Page, from: { x: number; y: number }, to: { x: number; y: number }) => {
   const saved = page.waitForResponse((response) => response.url().endsWith("/move"));
   await page.mouse.move(from.x, from.y);
@@ -77,8 +78,8 @@ test("edits a card and the edit persists after reload", async ({ page }) => {
   await addCard(page, 0, title);
   const target = await cardById(page, title);
   await target.getByRole("button", { name: `Edit ${title}` }).click();
-  await target.getByLabel("Edit card title").fill(edited);
-  await target.getByLabel("Edit card details").fill("New details.");
+  await target.getByLabel("Card title").fill(edited);
+  await target.getByLabel("Card details").fill("New details.");
   await target.getByRole("button", { name: /save/i }).click();
   await expect(card(page, edited).getByText("New details.")).toBeVisible();
 
@@ -87,11 +88,41 @@ test("edits a card and the edit persists after reload", async ({ page }) => {
   await deleteCard(page, edited);
 });
 
+test("sets priority, due date and labels, which persist after reload", async ({ page }) => {
+  const title = uniqueTitle("Detailed card");
+  await addCard(page, 0, title);
+  const target = await cardById(page, title);
+  await target.getByRole("button", { name: `Edit ${title}` }).click();
+  await target.getByLabel("Priority").selectOption("high");
+  await target.getByLabel("Due date").fill("2020-01-15");
+  await target.getByLabel("Labels").fill("release, ops");
+  await target.getByRole("button", { name: /save/i }).click();
+
+  for (const reload of [false, true]) {
+    if (reload) {
+      await page.reload();
+    }
+    await expect(target.getByText("High priority")).toBeVisible();
+    await expect(target.getByText("Overdue: Jan 15, 2020")).toBeVisible();
+    await expect(target.getByText("release")).toBeVisible();
+    await expect(target.getByText("ops", { exact: true })).toBeVisible();
+  }
+
+  // Clearing the due date removes it.
+  await target.getByRole("button", { name: `Edit ${title}` }).click();
+  await target.getByLabel("Due date").fill("");
+  await target.getByRole("button", { name: /save/i }).click();
+  await expect(target.getByText(/Overdue/)).toHaveCount(0);
+  await page.reload();
+  await expect(target.getByText(/Overdue/)).toHaveCount(0);
+  await deleteCard(page, title);
+});
+
 test("renames a column and the name persists after reload", async ({ page }) => {
   const title = column(page, 3).getByLabel("Column title");
   const original = await title.inputValue();
   const renamed = uniqueTitle("QA");
-  const saved = page.waitForResponse((response) => response.url().includes("/api/columns/"));
+  const saved = page.waitForResponse((response) => response.url().includes("/columns/"));
   await title.fill(renamed);
   await title.press("Enter");
   await saved;
@@ -107,9 +138,13 @@ test("renames a column and the name persists after reload", async ({ page }) => 
 test("moves a card between columns and the move persists after reload", async ({ page }) => {
   const title = uniqueTitle("Dragged card");
   await addCard(page, 0, title);
-  const from = await center(page.getByRole("heading", { name: title }));
-  const columnBox = (await column(page, 3).boundingBox())!;
-  await drag(page, from, { x: columnBox.x + columnBox.width / 2, y: columnBox.y + 120 });
+  const heading = page.getByRole("heading", { name: title });
+  await heading.scrollIntoViewIfNeeded();
+  const from = await center(heading);
+  // Columns in a row share its height, so moving sideways stays inside the viewport and
+  // still ends in the target column.
+  const target = await center(column(page, 3));
+  await drag(page, from, { x: target.x, y: from.y });
   await expect(column(page, 3).getByText(title)).toBeVisible();
 
   await page.reload();
@@ -122,6 +157,7 @@ test("reorders cards within a column and the order persists after reload", async
   const second = uniqueTitle("Second card");
   await addCard(page, 1, first);
   await addCard(page, 1, second);
+  await card(page, second).scrollIntoViewIfNeeded();
   const from = await center(page.getByRole("heading", { name: first }));
   const to = await center(card(page, second));
   await drag(page, from, { x: to.x, y: to.y + 5 });
@@ -157,7 +193,12 @@ test("moves a card with the keyboard", async ({ page }) => {
   const saved = page.waitForResponse((response) => response.url().endsWith("/move"));
   await page.keyboard.press("Space");
   await saved;
-  await expect(column(page, 1).getByText(title)).toBeVisible();
+  // Which column ArrowRight reaches depends on the layout (dnd-kit picks the closest target).
+  await expect(column(page, 0).getByText(title)).toHaveCount(0);
+  await expect(card(page, title)).toBeVisible();
+  await page.reload();
+  await expect(card(page, title)).toBeVisible();
+  await expect(column(page, 0).getByText(title)).toHaveCount(0);
   await deleteCard(page, title);
 });
 
@@ -167,7 +208,7 @@ test("Space on a card's Edit button opens the editor instead of dragging", async
   const target = await cardById(page, title);
   await target.getByRole("button", { name: `Edit ${title}` }).focus();
   await page.keyboard.press("Space");
-  await expect(target.getByLabel("Edit card title")).toBeVisible();
+  await expect(target.getByLabel("Card title")).toBeVisible();
   await target.getByRole("button", { name: /cancel/i }).click();
   await deleteCard(page, title);
 });

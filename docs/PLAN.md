@@ -16,7 +16,7 @@ Each part has a checklist for the agent to tick off, the tests to write, and the
 ## Prerequisites
 
 - [x] Docker installed on the dev machine (Colima + Docker CLI via Homebrew).
-- [ ] `.env` in the project root containing `OPENROUTER_API_KEY` (needed from Part 8). Not currently present.
+- [ ] `.env` in the project root containing `OPENROUTER_API_KEY` (needed for the live AI tests and the chat). Not currently present.
 
 ---
 
@@ -130,8 +130,9 @@ The frontend uses the backend API so the board is persistent.
 
 The backend can call OpenRouter.
 
-- [ ] Add `openai` dependency; `backend/app/ai.py` builds a client from `OPENROUTER_API_KEY`
-- [ ] Temporary or internal route/function that sends "What is 2+2?" and returns the reply
+- [x] Add `openai` dependency; `backend/app/ai.py` builds a client from `OPENROUTER_API_KEY`
+- [x] Temporary or internal route/function that sends "What is 2+2?" and returns the reply (`ai.ask`)
+- [ ] Live test passes outside and inside the container (needs `.env`)
 
 **Tests:** unit test with the client mocked; live test (skipped without key) asserting the reply contains "4".
 
@@ -143,10 +144,11 @@ The backend can call OpenRouter.
 
 Each AI call includes the board JSON, the user's message and the conversation history. The AI replies with structured output: a message for the user and an optional board update.
 
-- [ ] Pydantic models for the AI response: `message: str` and an optional list of operations (create card, update card, move card, delete card, rename column)
-- [ ] System prompt explaining the board format and the operations
-- [ ] `POST /api/chat` taking the message and history; returns the AI message and the updated board if anything changed
-- [ ] Apply operations through the same DB functions the board routes use, in one transaction; reject invalid ids without partial changes
+- [x] Pydantic models for the AI response: `message: str` and an optional list of operations (create card, update card, move card, delete card, rename column)
+- [x] System prompt explaining the board format and the operations
+- [x] `POST /api/chat` taking the message and history; returns the AI message and the updated board if anything changed
+- [x] Apply operations through the same DB functions the board routes use, in one transaction; reject invalid ids without partial changes
+- [ ] Live chat test passes (needs `.env`)
 
 **Tests:** mocked AI responses covering no-op reply, each operation type, multiple operations in one reply, and invalid operations (no changes applied). Live test (skipped without key): asking to create a card results in a new card in the DB.
 
@@ -158,11 +160,85 @@ Each AI call includes the board JSON, the user's message and the conversation hi
 
 A sidebar chat widget in the UI. When the AI changes the board, the board refreshes automatically.
 
-- [ ] Sidebar component with message list, input and send button (purple submit), using the project color scheme
-- [ ] Conversation history kept in frontend state and sent with each message
-- [ ] Loading indicator while waiting for the AI; error message on failure
-- [ ] When the response includes a board update, replace the board state with it
+- [x] Sidebar component with message list, input and send button (purple submit), using the project color scheme
+- [x] Conversation history kept in frontend state and sent with each message
+- [x] Loading indicator while waiting for the AI; error message on failure
+- [x] When the response includes a board update, replace the board state with it
+- [ ] Manual check with the live model (needs `.env`)
 
 **Tests:** unit tests for sending a message, rendering replies, loading and error states, and board refresh on update (API mocked). E2E with the chat route mocked: a message that creates a card shows the card on the board without reload. Manual check with the live model.
 
 **Success criteria:** a user can chat with the AI in the sidebar and see card changes made by the AI appear immediately; all tests pass.
+
+---
+
+# Phase 2: Full project management app
+
+Goal: grow the MVP into a multi-user, multi-board project management app. Each part keeps the app working, ships with tests (backend pytest, frontend Vitest, Playwright e2e), and updates the docs. Existing databases (the Docker volume holds real data) are upgraded by numbered migrations, never by deleting the file.
+
+## Part 11: Schema migrations and user accounts
+
+- [x] Migrations: `PRAGMA user_version` plus an ordered list of migration scripts in `db.py`, applied on startup in one transaction each; fresh and existing DBs go through the same path
+- [x] Migration 1: `users.password_hash`
+- [x] Password hashing with stdlib `hashlib.scrypt` (random salt, constant-time compare); no new dependency
+- [x] Demo account `user` / `password` kept (created or given its password on startup) so existing sign-ins and tests still work
+- [x] Routes: register, login (checks the hash), logout, me, change password, delete account. Session stores the user id; a deleted user's session gets 401
+- [x] Frontend: sign-up mode on the login form; account dialog (signed-in name, change password, delete account)
+
+**Tests:** migrations on a fresh DB and on a v0 DB with data (data kept); hashing; each auth route including duplicates, wrong passwords, validation, deleted user; frontend sign-up and account dialog; e2e register, sign out and back in, change password.
+
+## Part 12: Multiple boards per user
+
+- [x] Migration 2: boards get a `title` and lose `UNIQUE(user_id)`; the existing board keeps its data
+- [x] Routes scoped by board: `GET/POST /api/boards`, `PATCH/DELETE /api/boards/{id}`, and board, column, card and chat routes under `/api/boards/{id}/...`; other users' boards are 404
+- [x] New boards get the default columns (no demo cards); a new user gets one seeded board; the last board cannot be deleted (409)
+- [x] Frontend: board switcher (list, create, rename, delete), remembers the last board
+
+**Tests:** ownership and isolation between users and boards, CRUD, deleting a board removes its cards; e2e create and switch boards.
+
+## Part 13: Richer cards
+
+- [x] Migration 3: cards get `priority` (none/low/medium/high), `due_date` (ISO date or null) and `labels` (list of short strings)
+- [x] Shown on cards (priority badge, due date with overdue highlight, label chips) and editable in the card form
+- [x] AI operations and prompt updated for the new fields (the prompt also gets today's date)
+- [x] Card updates are partial (only the fields sent change; `dueDate: null` clears it)
+
+## Part 14: Column management
+
+- [x] Add, delete (moving its cards to another column or deleting them) and reorder columns; at least one column per board (and at most 20)
+- [x] AI can add and rename columns (deleting and reordering stay with the user)
+
+## Part 15: Search, filters and overview
+
+- [x] Filter the board by text, priority, label and overdue; clear filters (frontend only: the board is already loaded whole)
+- [x] Board summary: total, overdue, due in 7 days, high priority (cards per column are in each column header, "N of M" while filtering)
+
+## Part 16: Hardening and polish
+
+- [x] Coverage measured and enforced: backend `uv run pytest --cov=app` (line and branch, fails under 95%; at 100% lines, 99.7% with branches), frontend `npm run test:coverage` (fails under 95% statements and lines, 90% branches and functions; at 99.6% statements, 98.3% branches)
+- [x] Gaps closed: drag-end logic extracted to the pure `planMove`; drag handlers tested with a stand-in `DndContext`; auth API wrappers, drag preview, failure branches, migration foreign-key check
+- [x] Review fixes: a failed column rename now shows the saved title again (the input stayed on the rejected text); chat message (4000) and history (latest 40 turns) are capped on both sides; entered passwords are capped at 128 characters before hashing
+
+## Part 17: Sharing boards
+
+- [x] Migration 4: `board_members (board_id, user_id)`; the owner stays `boards.user_id`
+- [x] Members can open and change the board's content and use its chat; only the owner renames or deletes the board and manages members (403 for members, 404 for everyone else)
+- [x] Routes: list members; owner adds a member by username; owner removes a member, or a member leaves
+- [x] The board list includes shared boards with their owner; "at least one board" counts owned boards
+- [x] Frontend: shared boards marked in the switcher; a Share dialog (members, add by username, remove, leave); owner-only actions hidden for members
+
+## Part 18: Card comments and activity
+
+- [x] Comments on cards (author, time, text); delete own comments
+- [x] Board activity log (card created, moved, edited, deleted; column and member changes; comments; AI changes marked "via the AI assistant"), newest first, latest 100
+
+## Part 19: Checklists
+
+- [x] Checklist items on cards (text, done; at most 50), progress shown on the card; own table and per-item routes so people ticking different items of a shared card never overwrite each other; ticking shows at once and reverts if saving fails; logged as activity; the AI sees checklists but does not change them
+
+## Part 20: Final review
+
+- [x] Password hashing moved out of write transactions (change password and delete account held the database write lock for the length of scrypt)
+- [x] Usernames ignore case (migration 7): no "Alice" and "alice" as separate accounts, which sharing by name would confuse; sign-in and member lookups match any case
+- [x] Sign-in trims the username and shows the registered spelling
+- [x] README lists the features

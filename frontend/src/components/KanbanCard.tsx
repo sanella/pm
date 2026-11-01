@@ -1,19 +1,21 @@
-import { useState, type FormEvent, type KeyboardEventHandler } from "react";
+import { useState, type KeyboardEventHandler } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import type { Card } from "@/lib/kanban";
+import { CardForm } from "@/components/CardForm";
+import { CardMeta } from "@/components/CardMeta";
+import type { Card, CardFields } from "@/lib/kanban";
 
 type KanbanCardProps = {
   card: Card;
   onDelete: (cardId: string) => void;
-  onEdit: (cardId: string, title: string, details: string) => void;
+  onEdit: (cardId: string, fields: CardFields) => void;
+  // Opens the card's checklist and comments.
+  onOpen: (cardId: string) => void;
 };
 
-export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
+export const KanbanCard = ({ card, onDelete, onEdit, onOpen }: KanbanCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(card.title);
-  const [details, setDetails] = useState(card.details);
 
   const {
     attributes,
@@ -33,20 +35,6 @@ export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
     transition,
   };
 
-  const startEditing = () => {
-    setTitle(card.title);
-    setDetails(card.details);
-    setIsEditing(true);
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!title.trim()) {
-      return;
-    }
-    onEdit(card.id, title.trim(), details.trim());
-    setIsEditing(false);
-  };
 
   return (
     <article
@@ -61,37 +49,15 @@ export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
       data-testid={`card-${card.id}`}
     >
       {isEditing ? (
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            aria-label="Edit card title"
-            className="w-full rounded-xl border border-[var(--stroke)] bg-white px-3 py-2 text-sm font-medium text-[var(--navy-dark)] outline-none transition focus:border-[var(--primary-blue)]"
-            required
-          />
-          <textarea
-            value={details}
-            onChange={(event) => setDetails(event.target.value)}
-            aria-label="Edit card details"
-            rows={3}
-            className="w-full resize-none rounded-xl border border-[var(--stroke)] bg-white px-3 py-2 text-sm text-[var(--gray-text)] outline-none transition focus:border-[var(--primary-blue)]"
-          />
-          <div className="flex items-center gap-2">
-            <button
-              type="submit"
-              className="rounded-full bg-[var(--secondary-purple)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="rounded-full border border-[var(--stroke)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:text-[var(--navy-dark)]"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <CardForm
+          initial={card}
+          submitLabel="Save"
+          onSubmit={(fields) => {
+            onEdit(card.id, fields);
+            setIsEditing(false);
+          }}
+          onCancel={() => setIsEditing(false)}
+        />
       ) : (
         <div className="flex items-start justify-between gap-3">
           <button
@@ -116,18 +82,27 @@ export const KanbanCard = ({ card, onDelete, onEdit }: KanbanCardProps) => {
             <h4 className="font-display text-base font-semibold text-[var(--navy-dark)]">
               {card.title}
             </h4>
-            <p className="mt-2 text-sm leading-6 text-[var(--gray-text)]">
-              {card.details}
-            </p>
+            {card.details && (
+              <p className="mt-2 text-sm leading-6 text-[var(--gray-text)]">{card.details}</p>
+            )}
+            <CardMeta card={card} />
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
             <button
               type="button"
-              onClick={startEditing}
+              onClick={() => setIsEditing(true)}
               className="rounded-full border border-transparent px-2 py-1 text-xs font-semibold text-[var(--primary-blue)] transition hover:border-[var(--stroke)]"
               aria-label={`Edit ${card.title}`}
             >
               Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpen(card.id)}
+              className="rounded-full border border-transparent px-2 py-1 text-xs font-semibold text-[var(--primary-blue)] transition hover:border-[var(--stroke)]"
+              aria-label={`Details for ${card.title}`}
+            >
+              Details
             </button>
             <button
               type="button"

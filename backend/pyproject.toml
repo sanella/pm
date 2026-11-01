@@ -5,6 +5,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.162.0",
     "itsdangerous>=2.2.0",
+    "openai>=3.42.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -12,8 +13,18 @@ dependencies = [
 dev = [
     "httpx2>=2.16.0",
     "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["live: calls the real OpenRouter API (skipped without OPENROUTER_API_KEY)"]
+
+[tool.coverage.report]
+# Applies to `uv run pytest --cov=app`.
+fail_under = 95
+show_missing = true
+
+[tool.coverage.run]
+branch = true

@@ -32,3 +32,11 @@ test("logs out and stays logged out after reload", async ({ page }) => {
   await page.reload();
   await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
 });
+
+test("signs in regardless of username case and stray spaces", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Username").fill(" USER ");
+  await page.getByLabel("Password").fill("password");
+  await page.getByRole("button", { name: /^sign in$/i }).click();
+  await expect(page.getByText("Signed in as user")).toBeVisible();
+});

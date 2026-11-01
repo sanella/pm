@@ -11,6 +11,11 @@ export default defineConfig({
     mockReset: true,
     coverage: {
       reporter: ["text", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      // layout.tsx only loads fonts and the page shell.
+      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/app/layout.tsx"],
+      // `npm run test:coverage` fails below these.
+      thresholds: { statements: 95, branches: 90, functions: 90, lines: 95 },
     },
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules", "tests"],

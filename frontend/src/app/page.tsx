@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { KanbanBoard } from "@/components/KanbanBoard";
+import { Workspace } from "@/components/Workspace";
 import { LoginForm } from "@/components/LoginForm";
 import { getCurrentUser, logout } from "@/lib/api";
 
@@ -43,5 +43,7 @@ export default function Home() {
   if (user === null) {
     return <LoginForm onLogin={setUser} />;
   }
-  return <KanbanBoard onLogout={handleLogout} />;
+  return (
+    <Workspace username={user} onLogout={handleLogout} onAccountDeleted={() => setUser(null)} />
+  );
 }

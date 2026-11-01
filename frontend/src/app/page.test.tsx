@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Home from "@/app/page";
-import { getBoard, getCurrentUser, login, logout } from "@/lib/api";
+import { deleteAccount, getBoard, getCurrentUser, listBoards, login, logout } from "@/lib/api";
 import { initialData } from "@/lib/kanban";
 
 vi.mock("@/lib/api", () => ({
@@ -9,11 +9,14 @@ vi.mock("@/lib/api", () => ({
   login: vi.fn(),
   logout: vi.fn(),
   getBoard: vi.fn(),
+  listBoards: vi.fn(),
+  deleteAccount: vi.fn(),
 }));
 
 describe("Home", () => {
   beforeEach(() => {
     vi.mocked(getBoard).mockResolvedValue(initialData);
+    vi.mocked(listBoards).mockResolvedValue([{ id: 1, title: "My board", owner: "alice", isOwner: true }]);
   });
 
   it("shows the login form when signed out", async () => {
@@ -38,7 +41,7 @@ describe("Home", () => {
 
   it("shows the board after logging in", async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(null);
-    vi.mocked(login).mockResolvedValue(true);
+    vi.mocked(login).mockResolvedValue("user");
     render(<Home />);
 
     await userEvent.type(await screen.findByLabelText("Username"), "user");
@@ -57,6 +60,19 @@ describe("Home", () => {
     await userEvent.click(screen.getByRole("button", { name: /log out/i }));
 
     expect(logout).toHaveBeenCalledOnce();
+    expect(await screen.findByRole("heading", { name: /sign in/i })).toBeInTheDocument();
+  });
+
+  it("shows the signed-in user and returns to sign in after deleting the account", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue("alice");
+    vi.mocked(deleteAccount).mockResolvedValue(null);
+    render(<Home />);
+
+    expect(await screen.findByText("Signed in as alice")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^account$/i }));
+    await userEvent.type(screen.getByLabelText("Password to confirm deletion"), "secret-pass");
+    await userEvent.click(screen.getByRole("button", { name: /delete account/i }));
+
     expect(await screen.findByRole("heading", { name: /sign in/i })).toBeInTheDocument();
   });
 });

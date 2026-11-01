@@ -5,8 +5,10 @@ from app.main import app
 
 
 @pytest.fixture
-def client():
-    return TestClient(app)
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "pm.db"))
+    with TestClient(app) as client:
+        yield client
 
 
 def login(client, username="user", password="password"):

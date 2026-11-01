@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -9,30 +9,71 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  pointerWithin,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { AccountDialog } from "@/components/AccountDialog";
+import { ActivityDialog } from "@/components/ActivityDialog";
+import { AddColumnForm } from "@/components/AddColumnForm";
+import { BoardSummary } from "@/components/BoardSummary";
+import { FilterBar } from "@/components/FilterBar";
+import { ChatSidebar } from "@/components/ChatSidebar";
+import { CardDialog } from "@/components/CardDialog";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import * as api from "@/lib/api";
-import { findCardPosition, moveCard, type BoardData } from "@/lib/kanban";
+import {
+  boardLabels,
+  boardSummary,
+  emptyFilter,
+  matchesFilter,
+  planMove,
+  todayISO,
+  type BoardData,
+  type CardFields,
+  type CardFilter,
+} from "@/lib/kanban";
 
-type KanbanBoardProps = {
-  onLogout: () => void;
+// Prefer what the pointer is over: with closestCorners alone, a card dropped on an empty
+// column can land on a card in a neighbouring column. Keyboard drags have no pointer.
+const collisionDetection: CollisionDetection = (args) => {
+  const collisions = pointerWithin(args);
+  return collisions.length > 0 ? collisions : closestCorners(args);
 };
 
-export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
+type KanbanBoardProps = {
+  boardId: number;
+  username: string;
+  onLogout: () => void;
+  onAccountDeleted: () => void;
+};
+
+export const KanbanBoard = ({
+  boardId,
+  username,
+  onLogout,
+  onAccountDeleted,
+}: KanbanBoardProps) => {
   const [board, setBoard] = useState<BoardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<CardFilter>(emptyFilter);
+  // Counts failed saves; inputs keyed on it show the saved values again after a failure.
+  const [failedSaves, setFailedSaves] = useState(0);
 
   useEffect(() => {
     api
-      .getBoard()
+      .getBoard(boardId)
       .then(setBoard)
       .catch(() => setError("Could not load the board."));
-  }, []);
+  }, [boardId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -50,6 +91,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
       setError(null);
     } catch {
       setBoard(previous);
+      setFailedSaves((count) => count + 1);
       setError("Could not save your change. Please try again.");
     }
   };
@@ -83,33 +125,48 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
     const { active, over } = event;
     setActiveCardId(null);
 
-    if (!over || active.id === over.id) {
-      return;
-    }
-
     const cardId = active.id as string;
-    const columns = moveCard(board.columns, cardId, over.id as string);
-    const target = findCardPosition(columns, cardId);
-    if (columns === board.columns || !target) {
+    const move = over && planMove(board.columns, cardId, over.id as string);
+    if (!move) {
       return;
     }
     // Move right away so the card does not jump back while the request runs.
-    setBoard({ ...board, columns });
-    save(api.moveCard(cardId, target.columnId, target.position), board);
+    setBoard({ ...board, columns: move.columns });
+    save(api.moveCard(boardId, cardId, move.columnId, move.position), board);
   };
 
   const handleRenameColumn = (columnId: string, title: string) =>
-    save(api.renameColumn(columnId, title), board);
+    save(api.renameColumn(boardId, columnId, title), board);
 
-  const handleAddCard = (columnId: string, title: string, details: string) =>
-    save(api.createCard(columnId, title, details), board);
+  const handleAddCard = (columnId: string, fields: CardFields) =>
+    save(api.createCard(boardId, columnId, fields), board);
 
-  const handleEditCard = (cardId: string, title: string, details: string) =>
-    save(api.updateCard(cardId, title, details), board);
+  const handleEditCard = (cardId: string, fields: CardFields) =>
+    save(api.updateCard(boardId, cardId, fields), board);
 
-  const handleDeleteCard = (cardId: string) => save(api.deleteCard(cardId), board);
+  const handleDeleteCard = (cardId: string) => save(api.deleteCard(boardId, cardId), board);
+
+  // Ticked at once (a controlled checkbox would otherwise flip back until the reply).
+  const handleToggleItem = (cardId: string, itemId: string, done: boolean) => {
+    const card = board.cards[cardId];
+    const checklist = card.checklist.map((item) => (item.id === itemId ? { ...item, done } : item));
+    setBoard({ ...board, cards: { ...board.cards, [cardId]: { ...card, checklist } } });
+    save(api.updateChecklistItem(boardId, cardId, itemId, { done }), board);
+  };
+
+  const handleAddColumn = (title: string) => save(api.addColumn(boardId, title), board);
+
+  const handleMoveColumn = (columnId: string, position: number) =>
+    save(api.moveColumn(boardId, columnId, position), board);
+
+  const handleDeleteColumn = (columnId: string, moveCardsTo: string | null) =>
+    save(api.deleteColumn(boardId, columnId, moveCardsTo), board);
 
   const activeCard = activeCardId ? board.cards[activeCardId] : null;
+  const today = todayISO();
+  const visibleCards = (cardIds: string[]) =>
+    cardIds.map((cardId) => board.cards[cardId]).filter((card) => matchesFilter(card, filter, today));
+  const shown = board.columns.reduce((count, column) => count + visibleCards(column.cardIds).length, 0);
 
   return (
     <div className="relative overflow-hidden">
@@ -121,7 +178,7 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[var(--gray-text)]">
-                Single Board Kanban
+                Project boards
               </p>
               <h1 className="mt-3 font-display text-4xl font-semibold text-[var(--navy-dark)]">
                 Kanban Studio
@@ -132,21 +189,37 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
               </p>
             </div>
             <div className="flex items-start gap-4">
-              <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] px-5 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--gray-text)]">
-                  Focus
-                </p>
-                <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
-                  One board. Five columns. Zero clutter.
-                </p>
+              <div className="flex flex-col items-end gap-2">
+                <p className="text-xs text-[var(--gray-text)]">Signed in as {username}</p>
+                <button
+                  type="button"
+                  onClick={() => setChatOpen(true)}
+                  className="rounded-full bg-[var(--secondary-purple)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:brightness-110"
+                >
+                  AI Assistant
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivityOpen(true)}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--primary-blue)] transition hover:border-[var(--primary-blue)]"
+                >
+                  Activity
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen(true)}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--primary-blue)] transition hover:border-[var(--primary-blue)]"
+                >
+                  Account
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)]"
+                >
+                  Log out
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="rounded-full border border-[var(--stroke)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--gray-text)] transition hover:border-[var(--primary-blue)] hover:text-[var(--navy-dark)]"
-              >
-                Log out
-              </button>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
@@ -159,8 +232,20 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
                 {column.title}
               </div>
             ))}
+            <AddColumnForm onAdd={handleAddColumn} />
           </div>
         </header>
+
+        <section aria-label="Overview and filters" className="flex flex-col gap-4">
+          <BoardSummary summary={boardSummary(board, today)} />
+          <FilterBar
+            filter={filter}
+            labels={boardLabels(board)}
+            shown={shown}
+            total={Object.keys(board.cards).length}
+            onChange={setFilter}
+          />
+        </section>
 
         {error && (
           <p
@@ -173,20 +258,29 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <section className="grid gap-6 lg:grid-cols-5">
+          {/* One grid column per board column; scrolls sideways when they do not fit. */}
+          <section
+            className="grid gap-6 lg:grid-cols-[repeat(var(--column-count),minmax(220px,1fr))] lg:overflow-x-auto lg:pb-2"
+            style={{ "--column-count": board.columns.length } as CSSProperties}
+          >
             {board.columns.map((column) => (
               <KanbanColumn
                 key={column.id}
                 column={column}
-                cards={column.cardIds.map((cardId) => board.cards[cardId])}
+                cards={visibleCards(column.cardIds)}
+                columns={board.columns}
+                failedSaves={failedSaves}
+                onMove={handleMoveColumn}
+                onDelete={handleDeleteColumn}
                 onRename={handleRenameColumn}
                 onAddCard={handleAddCard}
                 onDeleteCard={handleDeleteCard}
                 onEditCard={handleEditCard}
+                onOpenCard={setOpenCardId}
               />
             ))}
           </section>
@@ -199,6 +293,32 @@ export const KanbanBoard = ({ onLogout }: KanbanBoardProps) => {
           </DragOverlay>
         </DndContext>
       </main>
+      {activityOpen && <ActivityDialog boardId={boardId} onClose={() => setActivityOpen(false)} />}
+      {openCardId && board.cards[openCardId] && (
+        <CardDialog
+          boardId={boardId}
+          card={board.cards[openCardId]}
+          onClose={() => setOpenCardId(null)}
+          onAddItem={(text) => save(api.addChecklistItem(boardId, openCardId, text), board)}
+          onToggleItem={(itemId, done) => handleToggleItem(openCardId, itemId, done)}
+          onRemoveItem={(itemId) =>
+            save(api.deleteChecklistItem(boardId, openCardId, itemId), board)
+          }
+        />
+      )}
+      {accountOpen && (
+        <AccountDialog
+          username={username}
+          onClose={() => setAccountOpen(false)}
+          onAccountDeleted={onAccountDeleted}
+        />
+      )}
+      <ChatSidebar
+        boardId={boardId}
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        onBoardUpdate={setBoard}
+      />
     </div>
   );
 };

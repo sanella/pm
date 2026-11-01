@@ -183,3 +183,4 @@ backend/data/
 
 # Personal Claude Code settings
 .claude/settings.local.json
+.claude/*.local.md
