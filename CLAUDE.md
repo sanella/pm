@@ -8,7 +8,7 @@ Each area has its own detailed notes: `backend/AGENTS.md` (structure, routes, Do
 
 ## Current state
 
-Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on. Parts 1-6 are done: FastAPI serves the static frontend export at `/` and the API under `/api`; sign-in (`user` / `password`) is enforced via a session cookie; board CRUD routes persist to SQLite (`docs/DATABASE.md`). The frontend calls only the auth routes so far; wiring the board to the API is Part 7. AI chat (Parts 8-10) is not started.
+Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on. Parts 1-7 are done: FastAPI serves the static frontend export at `/` and the API under `/api`; sign-in (`user` / `password`) is enforced via a session cookie; the board loads from and saves every change to SQLite through the board routes (`docs/DATABASE.md`). AI chat (Parts 8-10) is not started.
 
 ## Commands
 
@@ -43,7 +43,7 @@ E2E_BASE_URL=http://localhost:8000 npx playwright test   # e2e against the runni
 
 - One container: the `Dockerfile` builds the Next.js static export in a Node stage and copies it into `backend/app/static`, which FastAPI mounts at `/` after all `/api` routes (it must stay last). In dev, the Next dev server rewrites `/api/*` to the backend instead.
 - The board shape is shared end to end: frontend `BoardData` in `src/lib/kanban.ts` (`{ columns: Column[], cards: Record<id, Card> }`, card order in each column's `cardIds`) matches the backend Pydantic `Board` in `app/models.py` (camelCase JSON). Every board route returns the full updated `Board`. The AI structured output (Part 9) should apply changes through the same `app/db.py` board functions.
-- Frontend: `src/app/page.tsx` checks `/api/auth/me` and renders `LoginForm` or `KanbanBoard`. `KanbanBoard` still holds the board in local `useState` seeded from `initialData`. Keep board mutations pure in `src/lib/kanban.ts` (e.g. `moveCard`: dropping on a column id appends, on a card id inserts at its position). Backend calls go through `src/lib/api.ts` with relative `/api` URLs.
+- Frontend: `src/app/page.tsx` checks `/api/auth/me` and renders `LoginForm` or `KanbanBoard`. `KanbanBoard` loads the board with `GET /api/board`, sends each change to its route and replaces local state with the returned board (drag moves are applied first and reverted if the call fails). Keep board mutations pure in `src/lib/kanban.ts` (e.g. `moveCard`: dropping on a column id appends, on a card id inserts at its position). Backend calls go through `src/lib/api.ts` with relative `/api` URLs.
 - Backend: all DB access goes through `db.transaction()` (`BEGIN IMMEDIATE`, foreign keys on). Board functions take a `board_id`, check ownership and raise `NotFound` (404). The user and a seeded default board are created on first access.
 
 ## Color scheme

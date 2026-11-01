@@ -115,10 +115,10 @@ API routes to read and change a user's Kanban, persisted in SQLite.
 
 The frontend uses the backend API so the board is persistent.
 
-- [ ] `src/lib/api.ts` with typed functions for each board route
-- [ ] Load the board from the API after login instead of `initialData`
-- [ ] Each action (rename, add, edit, delete, move) calls the API; update local state from the response
-- [ ] Simple loading state and a visible error message if a call fails
+- [x] `src/lib/api.ts` with typed functions for each board route
+- [x] Load the board from the API after login instead of `initialData`
+- [x] Each action (rename, add, edit, delete, move) calls the API; update local state from the response (moves show immediately and revert if the call fails)
+- [x] Simple loading state and a visible error message if a call fails
 
 **Tests:** unit tests with `fetch` mocked for load and each action. E2E against the container: changes persist after reload for add, edit, delete, rename and move; data persists after `stop.sh` and `start.sh`.
 

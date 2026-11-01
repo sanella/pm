@@ -1,15 +1,21 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Home from "@/app/page";
-import { getCurrentUser, login, logout } from "@/lib/api";
+import { getBoard, getCurrentUser, login, logout } from "@/lib/api";
+import { initialData } from "@/lib/kanban";
 
 vi.mock("@/lib/api", () => ({
   getCurrentUser: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  getBoard: vi.fn(),
 }));
 
 describe("Home", () => {
+  beforeEach(() => {
+    vi.mocked(getBoard).mockResolvedValue(initialData);
+  });
+
   it("shows the login form when signed out", async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(null);
     render(<Home />);
@@ -47,7 +53,8 @@ describe("Home", () => {
     vi.mocked(logout).mockResolvedValue();
     render(<Home />);
 
-    await userEvent.click(await screen.findByRole("button", { name: /log out/i }));
+    await screen.findByRole("heading", { name: "Kanban Studio" });
+    await userEvent.click(screen.getByRole("button", { name: /log out/i }));
 
     expect(logout).toHaveBeenCalledOnce();
     expect(await screen.findByRole("heading", { name: /sign in/i })).toBeInTheDocument();

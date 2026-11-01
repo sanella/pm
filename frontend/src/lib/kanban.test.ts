@@ -1,4 +1,19 @@
-import { moveCard, type Column } from "@/lib/kanban";
+import { findCardPosition, moveCard, type Column } from "@/lib/kanban";
+
+describe("findCardPosition", () => {
+  const columns: Column[] = [
+    { id: "col-a", title: "A", cardIds: ["card-1", "card-2"] },
+    { id: "col-b", title: "B", cardIds: [] },
+  ];
+
+  it("returns the column and index of a card", () => {
+    expect(findCardPosition(columns, "card-2")).toEqual({ columnId: "col-a", position: 1 });
+  });
+
+  it("returns undefined for an unknown card", () => {
+    expect(findCardPosition(columns, "missing")).toBeUndefined();
+  });
+});
 
 describe("moveCard", () => {
   const baseColumns: Column[] = [

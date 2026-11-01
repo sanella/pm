@@ -51,5 +51,5 @@ The backend reads the tables and returns the shape the frontend already uses (`B
 
 ## Consequences for later parts
 
-- Seeded IDs are random, so e2e tests that use fixed IDs (`card-card-1`, `column-col-review`) will switch to finding cards and columns by their text in Part 7.
+- Seeded IDs are random, so e2e tests find columns by position and cards by title.
 - There are no schema migrations. Until there is real data, a schema change means deleting the DB file.
