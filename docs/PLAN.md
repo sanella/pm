@@ -15,7 +15,7 @@ Each part has a checklist for the agent to tick off, the tests to write, and the
 
 ## Prerequisites
 
-- [ ] Docker installed on the dev machine (Docker Desktop or OrbStack). Not currently installed.
+- [x] Docker installed on the dev machine (Colima + Docker CLI via Homebrew).
 - [ ] `.env` in the project root containing `OPENROUTER_API_KEY` (needed from Part 8). Not currently present.
 
 ---
@@ -37,12 +37,13 @@ Enrich this document with substeps, tests and success criteria for each part. Cr
 
 Docker infrastructure, FastAPI backend, start/stop scripts. Serves a hello world page and an API call.
 
-- [ ] `backend/` as a uv project (`pyproject.toml`, `uv.lock`) with `fastapi`, `uvicorn`; dev deps `pytest`, `httpx`
-- [ ] `backend/app/main.py`: `GET /api/health` returns `{"status": "ok"}`; static `index.html` hello world served at `/` that calls `/api/health` and shows the result
-- [ ] Root `Dockerfile` (Python stage only for now) using uv to install deps and run uvicorn on port 8000
-- [ ] `docker-compose.yml` with `.env` as env file and a named volume for data
-- [ ] `scripts/start.sh`, `scripts/stop.sh`, `scripts/start.ps1`, `scripts/stop.ps1`
-- [ ] Update `backend/AGENTS.md` and `scripts/AGENTS.md`; add run instructions to a minimal root `README.md`
+- [x] `backend/` as a uv project (`pyproject.toml`, `uv.lock`) with `fastapi`, `uvicorn`; dev deps `pytest`, `httpx2`
+- [x] `backend/app/main.py`: `GET /api/health` returns `{"status": "ok"}`; static `index.html` hello world served at `/` that calls `/api/health` and shows the result
+- [x] Root `Dockerfile` (Python stage only for now) using uv to install deps and run uvicorn on port 8000
+- [x] `docker-compose.yml` with `.env` as env file and a named volume for data
+- [x] `scripts/start.sh`, `scripts/stop.sh`, `scripts/start.ps1`, `scripts/stop.ps1`
+- [x] Update `backend/AGENTS.md` and `scripts/AGENTS.md`; add run instructions to a minimal root `README.md`
+- [x] Verify in Docker: `scripts/start.sh` serves the page and API at `http://localhost:8000`, `scripts/stop.sh` stops it
 
 **Tests:** `backend/tests/test_health.py` checks `/api/health` returns 200 and the expected JSON, and `/` returns the HTML page.
 
@@ -54,11 +55,12 @@ Docker infrastructure, FastAPI backend, start/stop scripts. Serves a hello world
 
 Build the frontend statically and serve it at `/` so the demo Kanban board appears.
 
-- [ ] Set `output: "export"` in `next.config.ts`; confirm `npm run build` produces `frontend/out`
-- [ ] Add a Node build stage to the `Dockerfile`; copy `frontend/out` into the Python image
-- [ ] FastAPI mounts the static export at `/` (after `/api` routes) with `html=True`; remove the hello world page
-- [ ] Add card editing (edit title and details of an existing card), which the requirements call for but the demo lacks
-- [ ] Point a Playwright config or project at the container (`http://localhost:8000`) in addition to the dev server
+- [x] Set `output: "export"` in `next.config.ts`; confirm `npm run build` produces `frontend/out`
+- [x] Add a Node build stage to the `Dockerfile`; copy `frontend/out` into the Python image
+- [x] FastAPI mounts the static export at `/` (after `/api` routes) with `html=True`; remove the hello world page
+- [x] Add card editing (edit title and details of an existing card), which the requirements call for but the demo lacks
+- [x] Point a Playwright config or project at the container (`http://localhost:8000`) in addition to the dev server (`E2E_BASE_URL`)
+- [x] Verify in Docker: the board loads at `http://localhost:8000` after `scripts/start.sh` (all e2e tests pass against the container)
 
 **Tests:** existing unit and e2e tests still pass; new unit and e2e tests for editing a card; backend test that `/` serves `index.html` and `/api/health` still works with static files mounted.
 
@@ -70,10 +72,10 @@ Build the frontend statically and serve it at `/` so the demo Kanban board appea
 
 On first visit to `/`, the user must log in with `user` / `password` to see the board, and can log out.
 
-- [ ] Backend: `SessionMiddleware` with a secret from env (dev default); `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
-- [ ] Frontend: on load call `/api/auth/me`; show a login form if 401, otherwise the board
-- [ ] Login form with error message on bad credentials; logout button in the board header
-- [ ] Next.js dev server proxies or rewrites `/api` to the backend so local dev works
+- [x] Backend: `SessionMiddleware` with a secret from env (dev default); `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- [x] Frontend: on load call `/api/auth/me`; show a login form if 401, otherwise the board
+- [x] Login form with error message on bad credentials; logout button in the board header
+- [x] Next.js dev server proxies or rewrites `/api` to the backend so local dev works
 
 **Tests:** backend tests for login success, login failure (401), `me` with and without session, logout clears session. Frontend unit tests for the login form (submit, error state) and logout. E2E: login required, wrong password shows error, successful login shows board, logout returns to login.
 
@@ -85,10 +87,10 @@ On first visit to `/`, the user must log in with `user` / `password` to see the 
 
 Propose a schema for the Kanban, save it as JSON, document the approach, get sign-off.
 
-- [ ] Draft schema covering users, one board per user, columns (ordered, renamable), cards (ordered within column, title, details)
-- [ ] Save as `docs/schema.json`
-- [ ] Write `docs/DATABASE.md`: tables, relationships, ordering approach, how the DB is created on first run, how the default board is seeded for a new user
-- [ ] User reviews and approves the schema (user sign-off)
+- [x] Draft schema covering users, one board per user, columns (ordered, renamable), cards (ordered within column, title, details)
+- [x] Save as `docs/schema.json`
+- [x] Write `docs/DATABASE.md`: tables, relationships, ordering approach, how the DB is created on first run, how the default board is seeded for a new user
+- [x] User reviews and approves the schema (user sign-off; new boards seeded with the demo cards)
 
 **Success criteria:** user has approved `docs/schema.json` and `docs/DATABASE.md`.
 
@@ -98,10 +100,10 @@ Propose a schema for the Kanban, save it as JSON, document the approach, get sig
 
 API routes to read and change a user's Kanban, persisted in SQLite.
 
-- [ ] `backend/app/db.py`: connect, create tables if missing, seed `user` and their default board
-- [ ] Routes (all require a session): get board; rename column; create card; update card; delete card; move card (target column and position)
-- [ ] Pydantic request/response models matching the frontend `BoardData` shape
-- [ ] Return 404 for ids not belonging to the current user
+- [x] `backend/app/db.py`: connect, create tables if missing, seed `user` and their default board
+- [x] Routes (all require a session): get board; rename column; create card; update card; delete card; move card (target column and position)
+- [x] Pydantic request/response models matching the frontend `BoardData` shape
+- [x] Return 404 for ids not belonging to the current user
 
 **Tests:** DB created from scratch on a fresh path; seed board present; each route's happy path; ordering correct after moves within and across columns; 401 without session; 404 for unknown ids; data persists across app restarts using the same file.
 
@@ -113,10 +115,10 @@ API routes to read and change a user's Kanban, persisted in SQLite.
 
 The frontend uses the backend API so the board is persistent.
 
-- [ ] `src/lib/api.ts` with typed functions for each board route
-- [ ] Load the board from the API after login instead of `initialData`
-- [ ] Each action (rename, add, edit, delete, move) calls the API; update local state from the response
-- [ ] Simple loading state and a visible error message if a call fails
+- [x] `src/lib/api.ts` with typed functions for each board route
+- [x] Load the board from the API after login instead of `initialData`
+- [x] Each action (rename, add, edit, delete, move) calls the API; update local state from the response (moves show immediately and revert if the call fails)
+- [x] Simple loading state and a visible error message if a call fails
 
 **Tests:** unit tests with `fetch` mocked for load and each action. E2E against the container: changes persist after reload for add, edit, delete, rename and move; data persists after `stop.sh` and `start.sh`.
 

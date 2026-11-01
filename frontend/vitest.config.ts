@@ -8,6 +8,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     globals: true,
+    mockReset: true,
     coverage: {
       reporter: ["text", "html"],
     },

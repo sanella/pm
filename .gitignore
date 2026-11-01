@@ -174,3 +174,12 @@ cython_debug/
 
 .DS_Store
 
+
+# Frontend static export copied in by the Docker build
+backend/app/static/
+
+# Local SQLite database
+backend/data/
+
+# Personal Claude Code settings
+.claude/settings.local.json

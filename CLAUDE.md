@@ -4,49 +4,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @AGENTS.md
 
-## Project overview
-
-A Project Management MVP: a single-user Kanban board web app with an AI chat sidebar. The user signs in (hardcoded `user` / `password`), sees one Kanban board with fixed, renamable columns, and can add, edit, delete, and drag-and-drop cards. The AI assistant in the sidebar can create, edit, and move one or more cards. The database supports multiple users for the future, but the MVP has one board per user and runs locally in Docker.
-
-## Color scheme
-
-Defined as CSS variables in `frontend/src/app/globals.css`. Use the variables, not hard-coded hex values.
-
-| Role | Hex | CSS variable | Usage |
-|---|---|---|---|
-| Accent Yellow | `#ecad0a` | `--accent-yellow` | Accent lines, highlights |
-| Blue Primary | `#209dd7` | `--primary-blue` | Links, key sections |
-| Purple Secondary | `#753991` | `--secondary-purple` | Submit buttons, important actions |
-| Dark Navy | `#032147` | `--navy-dark` | Main headings, body text |
-| Gray Text | `#888888` | `--gray-text` | Supporting text, labels |
-
-Supporting tokens: `--surface` (`#f7f8fb`, page background), `--surface-strong` (`#ffffff`), `--stroke` (navy at 8% opacity, borders), `--shadow`.
+Each area has its own detailed notes: `backend/AGENTS.md` (structure, routes, Docker), `frontend/AGENTS.md`, `scripts/AGENTS.md`. Keep them current when changing that area.
 
 ## Current state
 
-Only the frontend exists so far. `backend/` and `scripts/` contain placeholder `AGENTS.md` files only; there is no Docker setup yet. Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on.
+Work proceeds part by part according to `docs/PLAN.md` (Parts 1-10). Read it before starting work and check off its steps as they complete. Parts 1 and 5 require explicit user sign-off before moving on. Parts 1-7 are done: FastAPI serves the static frontend export at `/` and the API under `/api`; sign-in (`user` / `password`) is enforced via a session cookie; the board loads from and saves every change to SQLite through the board routes (`docs/DATABASE.md`). AI chat (Parts 8-10) is not started.
 
-## Frontend commands (run from `frontend/`)
+## Commands
+
+Full app in Docker (from the root, needs `.env`): `scripts/start.sh` / `scripts/stop.sh` (Windows: `.ps1`), serves http://localhost:8000.
+
+Backend (from `backend/`):
+
+```bash
+uv sync
+uv run uvicorn app.main:app --reload --port 8000   # API only, pair with the Next dev server
+uv run pytest
+uv run pytest tests/test_health.py::test_health    # single test
+rm -rf data                                        # reset the local DB (recreated and reseeded on start)
+```
+
+Frontend (from `frontend/`):
 
 ```bash
 npm install
-npm run dev                     # Next.js dev server on :3000
-npm run build
+npm run dev                     # :3000; proxies /api to the backend on :8000 (API_URL)
+npm run build                   # static export to frontend/out
 npm run lint
 npm run test:unit               # Vitest (jsdom), src/**/*.test.{ts,tsx}
 npx vitest run src/lib/kanban.test.ts          # single unit test file
 npx vitest run -t "test name"                  # single test by name
-npm run test:e2e                # Playwright (tests/), auto-starts dev server on 127.0.0.1:3000
+npm run test:e2e                # Playwright; auto-starts its own backend (:8001, temp DB) and dev server (:3001)
 npx playwright test tests/kanban.spec.ts -g "test name"
+E2E_BASE_URL=http://localhost:8000 npx playwright test   # e2e against the running container
 ```
 
-## Frontend architecture
+## Architecture
 
-- Next.js 16 App Router, React 19, Tailwind CSS 4, `@dnd-kit` for drag and drop. Path alias `@/` maps to `frontend/src/`.
-- `src/app/page.tsx` renders `KanbanBoard`, a client component that holds the entire board in local `useState` seeded from `initialData`. Nothing is persisted yet; Part 7 replaces this with backend API calls.
-- `src/lib/kanban.ts` defines the data model and pure logic: `BoardData` is `{ columns: Column[], cards: Record<id, Card> }`, where each column holds ordered `cardIds`. `moveCard` handles same-column reordering and cross-column moves (dropping on a column id appends; dropping on a card id inserts at that position). Keep board mutations pure here so they stay unit-testable, and keep this shape in mind when designing the DB schema and the AI structured-output format.
-- Components: `KanbanColumn` (droppable, renamable title), `KanbanCard` (sortable), `KanbanCardPreview` (drag overlay), `NewCardForm`.
+- One container: the `Dockerfile` builds the Next.js static export in a Node stage and copies it into `backend/app/static`, which FastAPI mounts at `/` after all `/api` routes (it must stay last). In dev, the Next dev server rewrites `/api/*` to the backend instead.
+- The board shape is shared end to end: frontend `BoardData` in `src/lib/kanban.ts` (`{ columns: Column[], cards: Record<id, Card> }`, card order in each column's `cardIds`) matches the backend Pydantic `Board` in `app/models.py` (camelCase JSON). Every board route returns the full updated `Board`. The AI structured output (Part 9) should apply changes through the same `app/db.py` board functions.
+- Frontend: `src/app/page.tsx` checks `/api/auth/me` and renders `LoginForm` or `KanbanBoard`. `KanbanBoard` loads the board with `GET /api/board`, sends each change to its route and replaces local state with the returned board (drag moves are applied first and reverted if the call fails). Keep board mutations pure in `src/lib/kanban.ts` (e.g. `moveCard`: dropping on a column id appends, on a card id inserts at its position). Backend calls go through `src/lib/api.ts` with relative `/api` URLs.
+- Backend: all DB access goes through `db.transaction()` (`BEGIN IMMEDIATE`, foreign keys on). Board functions take a `board_id`, check ownership and raise `NotFound` (404). The user and a seeded default board are created on first access.
 
-## Target architecture (from AGENTS.md / PLAN.md)
+## Color scheme
 
-A single Docker container where FastAPI (managed with `uv`) serves the statically exported Next.js build at `/` plus the API routes, backed by SQLite (created on first run). AI chat goes through OpenRouter with model `openai/gpt-oss-120b`, sending the board JSON plus conversation history and receiving structured output with a reply and an optional board update. Start/stop scripts for Mac, Linux, and Windows belong in `scripts/`.
+Defined as CSS variables in `frontend/src/app/globals.css`; use `var(--...)`, not hex values: `--accent-yellow`, `--primary-blue`, `--secondary-purple` (submit buttons), `--navy-dark` (headings, body text), `--gray-text`, plus `--surface`, `--surface-strong`, `--stroke`, `--shadow`.
+
+
+## DETAILED PLAN
+
+@docs/PLAN.md
