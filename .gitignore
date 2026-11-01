@@ -180,3 +180,6 @@ backend/app/static/
 
 # Local SQLite database
 backend/data/
+
+# Personal Claude Code settings
+.claude/settings.local.json

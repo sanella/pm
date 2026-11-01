@@ -49,3 +49,8 @@ E2E_BASE_URL=http://localhost:8000 npx playwright test   # e2e against the runni
 ## Color scheme
 
 Defined as CSS variables in `frontend/src/app/globals.css`; use `var(--...)`, not hex values: `--accent-yellow`, `--primary-blue`, `--secondary-purple` (submit buttons), `--navy-dark` (headings, body text), `--gray-text`, plus `--surface`, `--surface-strong`, `--stroke`, `--shadow`.
+
+
+## DETAILED PLAN
+
+@docs/PLAN.md
